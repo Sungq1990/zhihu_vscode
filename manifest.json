@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Zhihu VS Code Theme",
+  "version": "1.0.0",
+  "description": "把知乎换肤成 VS Code Dark+ 暗色主题。支持一键开关。",
+  "permissions": ["storage"],
+  "action": {
+    "default_title": "知乎 VS Code 换肤",
+    "default_popup": "popup/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.zhihu.com/*", "https://zhuanlan.zhihu.com/*"],
+      "css": ["css/skin.css", "css/ide.css"],
+      "js": ["js/content.js", "js/parse.js", "js/ide.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

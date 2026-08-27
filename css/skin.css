@@ -1,0 +1,873 @@
+/* ============================================================================
+   知乎 → VS Code Dark+ 换肤
+   ----------------------------------------------------------------------------
+   · 全部规则作用域限定在 html[data-zvsc="on"] 下，开关关闭时对页面零影响
+   · 大量使用 !important 以覆盖知乎自身高优先级样式
+   · 同一组件提供多套候选选择器，容错知乎改版
+   ============================================================================ */
+
+/* ---------------------------------------------------------------------------
+   0. 色板变量（VS Code Dark+）
+   --------------------------------------------------------------------------- */
+html[data-zvsc='on'] {
+  --zvs-bg: #1e1e1e;            /* 编辑器背景 */
+  --zvs-bg-deep: #181818;       /* 更深一层背景 */
+  --zvs-bg-panel: #252526;      /* 卡片 / 侧栏 / 弹层 */
+  --zvs-bg-header: #323233;     /* 顶栏 */
+  --zvs-bg-input: #3c3c3c;      /* 输入框 */
+  --zvs-hover: #2a2d2e;         /* 列表项 hover */
+
+  --zvs-border: #333333;        /* 常规分隔线 */
+  --zvs-border-strong: #454545; /* 强边框 */
+
+  --zvs-fg: #cccccc;            /* 主文字 */
+  --zvs-fg-strong: #e8e8e8;     /* 标题文字 */
+  --zvs-fg-dim: #858585;        /* 次要文字 */
+  --zvs-fg-faint: #6b6b6b;      /* 占位符 / 极弱文字 */
+
+  --zvs-link: #3794ff;          /* 链接蓝 */
+  --zvs-accent: #007acc;        /* 状态栏蓝 / 强调 */
+  --zvs-focus: #007fd4;         /* 输入聚焦描边 */
+  --zvs-btn: #0e639c;           /* 主按钮 */
+  --zvs-btn-hover: #1177bb;
+  --zvs-sel: #264f78;           /* 文字选中 */
+
+  /* Dark+ 语法色点缀 */
+  --zvs-blue: #569cd6;
+  --zvs-green: #6a9955;
+  --zvs-yellow: #dcdcaa;
+  --zvs-orange: #ce9178;
+  --zvs-purple: #c586c0;
+  --zvs-red: #f14c4c;
+
+  --zvs-mono: Consolas, 'Cascadia Mono', 'JetBrains Mono', Menlo, Monaco,
+    'Courier New', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', monospace;
+}
+
+/* ---------------------------------------------------------------------------
+   1. 基础：字体、背景、滚动条、选中色、光标
+   --------------------------------------------------------------------------- */
+
+html[data-zvsc='on'] body {
+  background: var(--zvs-bg) !important;
+  color: var(--zvs-fg) !important;
+  font-family: var(--zvs-mono) !important;
+  line-height: 1.7;
+}
+
+/* 常见文本元素统一 monospace。
+   用 :where() 把选择器优先级归零且不加 !important：
+   · 知乎自己显式设置 font-family 的元素（图标字体等）自然获胜，图标不被破坏
+   · 未显式设置的元素继承 body 的 monospace（上面那条带 !important 已兜底）
+   · 表单控件的 UA 默认字体仍会被任意作者规则覆盖 */
+:where(html[data-zvsc='on']) div,
+:where(html[data-zvsc='on']) span,
+:where(html[data-zvsc='on']) p,
+:where(html[data-zvsc='on']) a,
+:where(html[data-zvsc='on']) li,
+:where(html[data-zvsc='on']) ul,
+:where(html[data-zvsc='on']) ol,
+:where(html[data-zvsc='on']) h1, :where(html[data-zvsc='on']) h2,
+:where(html[data-zvsc='on']) h3, :where(html[data-zvsc='on']) h4,
+:where(html[data-zvsc='on']) h5, :where(html[data-zvsc='on']) h6,
+:where(html[data-zvsc='on']) label,
+:where(html[data-zvsc='on']) td, :where(html[data-zvsc='on']) th,
+:where(html[data-zvsc='on']) section, :where(html[data-zvsc='on']) article,
+:where(html[data-zvsc='on']) header, :where(html[data-zvsc='on']) footer,
+:where(html[data-zvsc='on']) aside, :where(html[data-zvsc='on']) nav,
+:where(html[data-zvsc='on']) dl, :where(html[data-zvsc='on']) dt,
+:where(html[data-zvsc='on']) dd,
+:where(html[data-zvsc='on']) figure, :where(html[data-zvsc='on']) figcaption,
+:where(html[data-zvsc='on']) cite, :where(html[data-zvsc='on']) summary,
+:where(html[data-zvsc='on']) time,
+:where(html[data-zvsc='on']) i, :where(html[data-zvsc='on']) b,
+:where(html[data-zvsc='on']) em, :where(html[data-zvsc='on']) strong,
+:where(html[data-zvsc='on']) small {
+  font-family: var(--zvs-mono);
+}
+
+:where(html[data-zvsc='on']) button,
+:where(html[data-zvsc='on']) input,
+:where(html[data-zvsc='on']) textarea,
+:where(html[data-zvsc='on']) select {
+  font-family: var(--zvs-mono);
+}
+
+/* 滚动条：细深灰，方角，贴近 VS Code（颜色随主题变量） */
+html[data-zvsc='on'] {
+  scrollbar-color: var(--zvs-scrollbar, #424242) var(--zvs-bg);
+}
+
+html[data-zvsc='on'] *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html[data-zvsc='on'] *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html[data-zvsc='on'] *::-webkit-scrollbar-thumb {
+  background: var(--zvs-scrollbar, #424242);
+}
+
+html[data-zvsc='on'] *::-webkit-scrollbar-thumb:hover {
+  background: var(--zvs-scrollbar-hover, #4f4f4f);
+}
+
+html[data-zvsc='on'] *::-webkit-scrollbar-corner {
+  background: var(--zvs-bg);
+}
+
+/* 文字选中色 */
+html[data-zvsc='on'] ::selection {
+  background: var(--zvs-sel);
+  color: #ffffff;
+}
+
+/* 输入光标颜色 */
+html[data-zvsc='on'] input,
+html[data-zvsc='on'] textarea,
+html[data-zvsc='on'] [contenteditable='true'] {
+  caret-color: #aeafad;
+}
+
+/* 复选框 / 单选 / 进度等控件强调色 */
+html[data-zvsc='on'] input[type='checkbox'],
+html[data-zvsc='on'] input[type='radio'],
+html[data-zvsc='on'] progress {
+  accent-color: var(--zvs-accent);
+}
+
+/* ---------------------------------------------------------------------------
+   2. 通用元素兜底：链接、标题、代码块、表格、引用、分割线
+   --------------------------------------------------------------------------- */
+
+html[data-zvsc='on'] a {
+  color: var(--zvs-link) !important;
+  text-decoration: none;
+  transition: color 0.1s ease;
+}
+
+html[data-zvsc='on'] a:hover {
+  text-decoration: underline;
+}
+
+html[data-zvsc='on'] h1, html[data-zvsc='on'] h2,
+html[data-zvsc='on'] h3, html[data-zvsc='on'] h4 {
+  color: var(--zvs-fg-strong) !important;
+}
+
+/* 行内代码 */
+html[data-zvsc='on'] code {
+  background: #343434 !important;
+  color: var(--zvs-orange) !important;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 90%;
+}
+
+/* 代码块：编辑器观感 */
+html[data-zvsc='on'] pre,
+html[data-zvsc='on'] .highlight {
+  background: var(--zvs-bg) !important;
+  border: 1px solid var(--zvs-border) !important;
+  border-radius: 3px !important;
+}
+
+html[data-zvsc='on'] pre code {
+  background: transparent !important;
+  color: var(--zvs-fg) !important;
+  padding: 12px;
+  display: block;
+  overflow-x: auto;
+}
+
+html[data-zvsc='on'] kbd {
+  background: var(--zvs-bg-input) !important;
+  border: 1px solid var(--zvs-border-strong) !important;
+  border-bottom-width: 2px !important;
+  border-radius: 3px !important;
+  color: var(--zvs-fg) !important;
+}
+
+html[data-zvsc='on'] blockquote {
+  border-left: 3px solid var(--zvs-green) !important;
+  background: transparent !important;
+  color: var(--zvs-fg-dim) !important;
+  margin: 10px 0;
+  padding: 2px 0 2px 14px !important;
+}
+
+html[data-zvsc='on'] hr {
+  border: none;
+  border-top: 1px solid var(--zvs-border) !important;
+  background: transparent !important;
+}
+
+html[data-zvsc='on'] table {
+  border-collapse: collapse;
+}
+
+html[data-zvsc='on'] th,
+html[data-zvsc='on'] td {
+  border: 1px solid var(--zvs-border) !important;
+  padding: 6px 10px;
+}
+
+html[data-zvsc='on'] th {
+  background: var(--zvs-bg-panel) !important;
+  color: var(--zvs-yellow) !important;
+}
+
+/* 搜索结果高亮词（知乎用 <em>）→ 语法黄 */
+html[data-zvsc='on'] .Highlight em,
+html[data-zvsc='on'] em.Highlight,
+html[data-zvsc='on'] .SearchResult-Card em {
+  color: var(--zvs-yellow) !important;
+  background: transparent !important;
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   3. 按钮（知乎 .Button 家族 + 投票按钮）
+   --------------------------------------------------------------------------- */
+
+html[data-zvsc='on'] .Button,
+html[data-zvsc='on'] button.Button {
+  border-radius: 3px !important;
+  transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+}
+
+/* 主按钮（关注、发布回答等）*/
+html[data-zvsc='on'] .Button--primary,
+html[data-zvsc='on'] .Button--blue,
+html[data-zvsc='on'] .FollowButton {
+  background: var(--zvs-btn) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-zvsc='on'] .Button--primary:hover,
+html[data-zvsc='on'] .Button--blue:hover,
+html[data-zvsc='on'] .FollowButton:hover {
+  background: var(--zvs-btn-hover) !important;
+}
+
+/* 幽灵按钮 */
+html[data-zvsc='on'] .Button--plain,
+html[data-zvsc='on'] .Button--grey,
+html[data-zvsc='on'] .Button--green-ghost,
+html[data-zvsc='on'] .Button--blue-phantom,
+html[data-zvsc='on'] .Button--yellow-phantom {
+  background: transparent !important;
+  color: var(--zvs-fg-dim) !important;
+  border: 1px solid var(--zvs-border-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-zvsc='on'] .Button--plain:hover,
+html[data-zvsc='on'] .Button--grey:hover,
+html[data-zvsc='on'] .Button--green-ghost:hover,
+html[data-zvsc='on'] .Button--blue-phantom:hover,
+html[data-zvsc='on'] .Button--yellow-phantom:hover {
+  background: var(--zvs-hover) !important;
+  color: var(--zvs-fg) !important;
+  border-color: var(--zvs-accent) !important;
+}
+
+/* 投票按钮：赞同 / 反对 */
+html[data-zvsc='on'] .VoteButton,
+html[data-zvsc='on'] .VoteButton--up,
+html[data-zvsc='on'] .VoteButton--down {
+  background: transparent !important;
+  color: var(--zvs-fg-dim) !important;
+  border: 1px solid var(--zvs-border-strong) !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  transition: all 0.1s ease;
+}
+
+html[data-zvsc='on'] .VoteButton--up:hover {
+  color: var(--zvs-link) !important;
+  border-color: var(--zvs-link) !important;
+  background: rgba(55, 148, 255, 0.08) !important;
+}
+
+html[data-zvsc='on'] .VoteButton--down:hover {
+  color: var(--zvs-red) !important;
+  border-color: var(--zvs-red) !important;
+  background: rgba(241, 76, 76, 0.08) !important;
+}
+
+/* 已投票状态 */
+html[data-zvsc='on'] .VoteButton--up.is-active,
+html[data-zvsc='on'] .VoteButton--up[aria-pressed='true'],
+html[data-zvsc='on'] .VoteButton.ToggledButton--up {
+  color: var(--zvs-link) !important;
+  border-color: var(--zvs-link) !important;
+  background: rgba(55, 148, 255, 0.12) !important;
+}
+
+html[data-zvsc='on'] .VoteButton--down.is-active,
+html[data-zvsc='on'] .VoteButton.ToggledButton--down {
+  color: var(--zvs-red) !important;
+  border-color: var(--zvs-red) !important;
+}
+
+/* 禁用态 */
+html[data-zvsc='on'] .Button[disabled],
+html[data-zvsc='on'] button[disabled] {
+  opacity: 0.45 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   4. 表单输入
+   --------------------------------------------------------------------------- */
+
+html[data-zvsc='on'] input:not([type='checkbox']):not([type='radio']):not([type='file']),
+html[data-zvsc='on'] textarea {
+  background: var(--zvs-bg-input) !important;
+  color: var(--zvs-fg) !important;
+  border: 1px solid transparent !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  outline: none;
+  transition: border-color 0.1s ease;
+}
+
+html[data-zvsc='on'] input:not([type='checkbox']):not([type='radio']):not([type='file']):focus,
+html[data-zvsc='on'] textarea:focus {
+  border-color: var(--zvs-focus) !important;
+}
+
+html[data-zvsc='on'] ::placeholder {
+  color: var(--zvs-fg-faint) !important;
+  opacity: 1 !important;
+}
+
+html[data-zvsc='on'] select {
+  background: var(--zvs-bg-input) !important;
+  color: var(--zvs-fg) !important;
+  border: 1px solid var(--zvs-border-strong) !important;
+  border-radius: 3px !important;
+}
+
+/* ---------------------------------------------------------------------------
+   5. 顶栏（AppHeader）
+   --------------------------------------------------------------------------- */
+
+html[data-zvsc='on'] .AppHeader {
+  background: var(--zvs-bg-header) !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid var(--zvs-border);
+}
+
+html[data-zvsc='on'] .AppHeader-inner {
+  background: transparent !important;
+}
+
+/* 知乎 logo 是深色 svg，暗底下强制反白保证可见 */
+html[data-zvsc='on'] .AppHeader-logo img,
+html[data-zvsc='on'] .AppHeader-logo {
+  filter: brightness(0) invert(1);
+}
+
+/* 顶部导航 tab */
+html[data-zvsc='on'] .Tabs-link a,
+html[data-zvsc='on'] .AppHeader-TabsLink {
+  color: var(--zvs-fg-dim) !important;
+}
+
+html[data-zvsc='on'] .Tabs-link a:hover {
+  color: var(--zvs-fg) !important;
+  background: var(--zvs-hover) !important;
+  text-decoration: none;
+}
+
+html[data-zvsc='on'] .Tabs-link.active a,
+html[data-zvsc='on'] .Tabs-link.is-active a {
+  color: var(--zvs-fg-strong) !important;
+}
+
+/* 顶栏搜索按钮（放大镜）*/
+html[data-zvsc='on'] .SearchBar-searchIcon,
+html[data-zvsc='on'] .AppSearch button {
+  background: transparent !important;
+  color: var(--zvs-fg-dim) !important;
+}
+
+html[data-zvsc='on'] .SearchBar-searchIcon:hover,
+html[data-zvsc='on'] .AppSearch button:hover {
+  color: var(--zvs-fg) !important;
+}
+
+/* 顶栏图标按钮 hover 底色 */
+html[data-zvsc='on'] .AppHeader-menuItem:hover,
+html[data-zvsc='on'] .Popover.AppHeader-menuItem:hover {
+  background: var(--zvs-hover) !important;
+}
+
+/* 问题页吸顶关注栏 */
+html[data-zvsc='on'] .QuestionFollowStatus,
+html[data-zvsc='on'] .Question-followStatus {
+  background: var(--zvs-bg-panel) !important;
+  border-bottom: 1px solid var(--zvs-border) !important;
+  box-shadow: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   6. 卡片体系（信息流卡片 / 侧栏卡片 / 搜索结果卡）
+   --------------------------------------------------------------------------- */
+
+html[data-zvsc='on'] .Card,
+html[data-zvsc='on'] .TopstoryItem,
+html[data-zvsc='on'] .SearchResult-Card,
+html[data-zvsc='on'] .QuestionHeader,
+html[data-zvsc='on'] .GlobalWrite-guide,
+html[data-zvsc='on'] .Pc-feedAd-card,
+html[data-zvsc='on'] .Card[class*='Ad'] {
+  background: var(--zvs-bg-panel) !important;
+  border: 1px solid var(--zvs-border) !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+}
+
+/* 页面级容器透明化，露出编辑器底色 */
+html[data-zvsc='on'] .TopstoryContainer,
+html[data-zvsc='on'] .Topstory-container,
+html[data-zvsc='on'] .QuestionPage,
+html[data-zvsc='on'] .Question-main,
+html[data-zvsc='on'] .SearchContainer,
+html[data-zvsc='on'] .App-main {
+  background: transparent !important;
+}
+
+/* ---------------------------------------------------------------------------
+   7. 首页信息流
+   --------------------------------------------------------------------------- */
+
+/* feed 顶部分类 tab（推荐 / 关注 / 热榜）*/
+html[data-zvsc='on'] .Topstory-tabs,
+html[data-zvsc='on'] .TopstoryTabs,
+html[data-zvsc='on'] .Tabs {
+  border-bottom: 1px solid var(--zvs-border) !important;
+}
+
+html[data-zvsc='on'] .Topstory-tabs .Tabs-link a,
+html[data-zvsc='on'] .TopstoryTabs .Tabs-link a {
+  color: var(--zvs-fg-dim) !important;
+  border-bottom: 2px solid transparent;
+}
+
+html[data-zvsc='on'] .Topstory-tabs .Tabs-link.active a,
+html[data-zvsc='on'] .TopstoryTabs .Tabs-link.is-active a {
+  color: var(--zvs-fg-strong) !important;
+  border-bottom-color: var(--zvs-accent) !important;
+}
+
+/* 条目内部 */
+html[data-zvsc='on'] .ContentItem-title {
+  color: var(--zvs-fg-strong) !important;
+}
+
+html[data-zvsc='on'] .ContentItem-title a {
+  color: var(--zvs-fg-strong) !important;
+  font-weight: 600;
+}
+
+html[data-zvsc='on'] .ContentItem-title a:hover {
+  color: var(--zvs-link) !important;
+}
+
+html[data-zvsc='on'] .ContentItem-meta,
+html[data-zvsc='on'] .ContentItem-time,
+html[data-zvsc='on'] .SearchItem-meta,
+html[data-zvsc='on'] .FeedSource .ContentItem-actions {
+  color: var(--zvs-fg-dim) !important;
+}
+
+/* 正文摘要与全文 */
+html[data-zvsc='on'] .RichContent-inner,
+html[data-zvsc='on'] .RichText,
+html[data-zvsc='on'] .ztext {
+  color: var(--zvs-fg) !important;
+  line-height: 1.75 !important;
+}
+
+/* 「展开阅读全文」按钮 */
+html[data-zvsc='on'] .ContentItem-expandButton,
+html[data-zvsc='on'] .ContentItem-more {
+  color: var(--zvs-link) !important;
+  background: transparent !important;
+}
+
+/* 折叠渐隐遮罩：mask 与颜色无关，重设防止残留白色渐变 */
+html[data-zvsc='on'] .RichContent--collapsedMask,
+html[data-zvsc='on'] [class*='ollapsedMask'],
+html[data-zvsc='on'] .CollapsedRichText {
+  -webkit-mask-image: linear-gradient(180deg, #000 60%, rgba(0, 0, 0, 0));
+  mask-image: linear-gradient(180deg, #000 60%, rgba(0, 0, 0, 0));
+}
+
+/* 作者行 */
+html[data-zvsc='on'] .AuthorInfo-name {
+  color: var(--zvs-link) !important;
+}
+
+html[data-zvsc='on'] .AuthorInfo-badgeText,
+html[data-zvsc='on'] .AuthorInfo-head,
+html[data-zvsc='on'] .AuthorInfo-detail {
+  color: var(--zvs-fg-dim) !important;
+}
+
+/* 操作行（评论 / 分享 / 收藏 …）*/
+html[data-zvsc='on'] .ContentItem-actions,
+html[data-zvsc='on'] .ContentItem-Actions {
+  border-top: 1px solid var(--zvs-border) !important;
+  background: transparent !important;
+  color: var(--zvs-fg-dim) !important;
+}
+
+html[data-zvsc='on'] .ContentItem-action {
+  color: var(--zvs-fg-dim) !important;
+}
+
+html[data-zvsc='on'] .ContentItem-action:hover {
+  color: var(--zvs-fg) !important;
+}
+
+html[data-zvsc='on'] .ContentItem-actions > span,
+html[data-zvsc='on'] .ContentItem-action--active {
+  color: var(--zvs-fg-dim) !important;
+}
+
+/* 「更多回答」分页按钮 */
+html[data-zvsc='on'] .PaginationButton {
+  background: var(--zvs-bg-panel) !important;
+  color: var(--zvs-fg-dim) !important;
+  border: 1px solid var(--zvs-border) !important;
+  border-radius: 3px !important;
+}
+
+html[data-zvsc='on'] .PaginationButton:hover {
+  color: var(--zvs-fg) !important;
+  border-color: var(--zvs-accent) !important;
+}
+
+/* 热榜序号 */
+html[data-zvsc='on'] .HotItem-rank {
+  color: var(--zvs-orange) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   8. 问题页
+   --------------------------------------------------------------------------- */
+
+html[data-zvsc='on'] .QuestionHeader-title {
+  color: var(--zvs-fg-strong) !important;
+}
+
+html[data-zvsc='on'] .QuestionHeader-detail,
+html[data-zvsc='on'] .QuestionRichText {
+  color: var(--zvs-fg) !important;
+}
+
+/* 话题标签 → 语法蓝 pill */
+html[data-zvsc='on'] .Tag,
+html[data-zvsc='on'] .TopicLink,
+html[data-zvsc='on'] .QuestionHeader-topics .Tag {
+  background: var(--zvs-hover) !important;
+  color: var(--zvs-blue) !important;
+  border: 1px solid var(--zvs-border) !important;
+  border-radius: 3px !important;
+}
+
+html[data-zvsc='on'] .Tag:hover,
+html[data-zvsc='on'] .TopicLink:hover {
+  border-color: var(--zvs-accent) !important;
+  text-decoration: none !important;
+}
+
+/* 回答列表分隔 */
+html[data-zvsc='on'] .List-item {
+  border-bottom: 1px solid var(--zvs-border);
+}
+
+html[data-zvsc='on'] .AnswersNavWrapper,
+html[data-zvsc='on'] .ListShortcut {
+  background: transparent !important;
+}
+
+/* 回答数量标题 */
+html[data-zvsc='on'] .AnswersNav-wrapper h4,
+html[data-zvsc='on'] .List-headerText,
+html[data-zvsc='on'] h4.AnswerCount {
+  color: var(--zvs-fg) !important;
+}
+
+/* 写回答编辑器容器 */
+html[data-zvsc='on'] .AnswerFormEditor,
+html[data-zvsc='on'] .Editable {
+  background: var(--zvs-bg-panel) !important;
+  color: var(--zvs-fg) !important;
+}
+
+html[data-zvsc='on'] .public-DraftEditor-content,
+html[data-zvsc='on'] .DraftEditor-editorContainer {
+  color: var(--zvs-fg) !important;
+  caret-color: #aeafad;
+}
+
+/* ---------------------------------------------------------------------------
+   9. 搜索页
+   --------------------------------------------------------------------------- */
+
+html[data-zvsc='on'] .SearchResult-Card .ContentItem-title em,
+html[data-zvsc='on'] .Highlight {
+  color: inherit;
+}
+
+html[data-zvsc='on'] .SearchTabs .Tabs-link a,
+html[data-zvsc='on'] .SearchTabs-link a {
+  color: var(--zvs-fg-dim) !important;
+}
+
+html[data-zvsc='on'] .SearchTabs .Tabs-link.active a {
+  color: var(--zvs-fg-strong) !important;
+  border-bottom-color: var(--zvs-accent) !important;
+}
+
+html[data-zvsc='on'] .SearchSideBar,
+html[data-zvsc='on'] .RelatedCommodities,
+html[data-zvsc='on'] .SearchMain {
+  background: transparent !important;
+}
+
+/* ---------------------------------------------------------------------------
+   10. 侧栏
+   --------------------------------------------------------------------------- */
+
+html[data-zvsc='on'] .GlobalSideNav,
+html[data-zvsc='on'] .Question-sideColumn,
+html[data-zvsc='on'] .Sticky {
+  background: transparent !important;
+}
+
+html[data-zvsc='on'] .SidebarListNav-listItem,
+html[data-zvsc='on'] .SideNavCommonItem {
+  color: var(--zvs-fg) !important;
+}
+
+html[data-zvsc='on'] .SidebarListNav-listItem:hover,
+html[data-zvsc='on'] .SideNavCommonItem:hover {
+  background: var(--zvs-hover) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   11. 浮层：弹窗 / 下拉菜单 / Tooltip / 评论区
+   --------------------------------------------------------------------------- */
+
+html[data-zvsc='on'] .Modal-backdrop {
+  background: rgba(0, 0, 0, 0.55) !important;
+}
+
+html[data-zvsc='on'] .Modal-wrapper .Modal,
+html[data-zvsc='on'] .Modal-content,
+html[data-zvsc='on'] .signQr-bottomContainer,
+html[data-zvsc='on'] [class*='Modal-body'] {
+  background: var(--zvs-bg-panel) !important;
+  color: var(--zvs-fg) !important;
+}
+
+html[data-zvsc='on'] .Modal {
+  background: var(--zvs-bg-panel) !important;
+  border: 1px solid var(--zvs-border-strong) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-zvsc='on'] .Modal-closeButton {
+  color: var(--zvs-fg-dim) !important;
+  background: transparent !important;
+}
+
+html[data-zvsc='on'] .Modal-closeButton:hover {
+  color: var(--zvs-fg-strong) !important;
+}
+
+/* 下拉菜单 / 列表浮层 */
+html[data-zvsc='on'] .Menu,
+html[data-zvsc='on'] [role='menu'],
+html[data-zvsc='on'] [role='listbox'],
+html[data-zvsc='on'] .Notifications-container,
+html[data-zvsc='on'] .Notifications-MainList {
+  background: var(--zvs-bg-panel) !important;
+  border: 1px solid var(--zvs-border-strong) !important;
+  border-radius: 3px !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-zvsc='on'] .Menu-item,
+html[data-zvsc='on'] [role='menuitem'],
+html[data-zvsc='on'] .Notifications-item {
+  color: var(--zvs-fg) !important;
+  background: transparent !important;
+}
+
+html[data-zvsc='on'] .Menu-item:hover,
+html[data-zvsc='on'] .Menu-item:focus,
+html[data-zvsc='on'] [role='menuitem']:hover,
+html[data-zvsc='on'] .Notifications-item:hover {
+  background: var(--zvs-hover) !important;
+}
+
+/* Tooltip */
+html[data-zvsc='on'] .Tooltip,
+html[data-zvsc='on'] [role='tooltip'] {
+  background: var(--zvs-bg-panel) !important;
+  color: var(--zvs-fg) !important;
+  border: 1px solid var(--zvs-border-strong) !important;
+}
+
+/* 评论区（问题页右侧抽屉 / 弹层）*/
+html[data-zvsc='on'] .Comments-container,
+html[data-zvsc='on'] .Comments-wrapper,
+html[data-zvsc='on'] .Comments {
+  background: var(--zvs-bg-panel) !important;
+  color: var(--zvs-fg) !important;
+  border-left: 1px solid var(--zvs-border) !important;
+}
+
+html[data-zvsc='on'] .CommentItemV2,
+html[data-zvsc='on'] [class*='CommentItem'] {
+  background: transparent !important;
+  color: var(--zvs-fg) !important;
+  border-bottom: 1px solid var(--zvs-border) !important;
+}
+
+html[data-zvsc='on'] .CommentItemV2-meta,
+html[data-zvsc='on'] [class*='CommentItem'] [class*='meta'] {
+  color: var(--zvs-fg-dim) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   12. 杂项
+   --------------------------------------------------------------------------- */
+
+/* 未登录首页的注册引导墙 */
+html[data-zvsc='on'] .SignFlowHomepage,
+html[data-zvsc='on'] .SignContainer-inner,
+html[data-zvsc='on'] .signFlowHome {
+  background: var(--zvs-bg) !important;
+  color: var(--zvs-fg) !important;
+}
+
+/* 页脚 */
+html[data-zvsc='on'] footer,
+html[data-zvsc='on'] .Footer {
+  color: var(--zvs-fg-faint) !important;
+  border-top: 1px solid var(--zvs-border);
+}
+
+/* 数字徽标保持醒目（消息数）*/
+html[data-zvsc='on'] .TopstoryItem-rightButton .Badge,
+html[data-zvsc='on'] [class*='badge'][class*='count'] {
+  color: #fff !important;
+}
+
+/* ---------------------------------------------------------------------------
+   13. 皮肤变体（settings.json 里切换，覆盖上面的变量）
+   --------------------------------------------------------------------------- */
+
+/* Light+ */
+html[data-zvsc-theme='light'] {
+  --zvs-bg: #ffffff;
+  --zvs-bg-deep: #f4f4f4;
+  --zvs-bg-panel: #f3f3f3;
+  --zvs-bg-header: #dddddd;
+  --zvs-bg-input: #ffffff;
+  --zvs-hover: #e8e8e8;
+  --zvs-border: #e5e5e5;
+  --zvs-border-strong: #c8c8c8;
+  --zvs-fg: #333333;
+  --zvs-fg-strong: #111111;
+  --zvs-fg-dim: #6f6f6f;
+  --zvs-fg-faint: #9d9d9d;
+  --zvs-link: #0066bf;
+  --zvs-accent: #0066bf;
+  --zvs-focus: #005fb8;
+  --zvs-btn: #005fb8;
+  --zvs-btn-hover: #0258a8;
+  --zvs-sel: #add6ff;
+  --zvs-blue: #0000ff;
+  --zvs-green: #098658;
+  --zvs-yellow: #bf8803;
+  --zvs-orange: #a31515;
+  --zvs-purple: #af00db;
+  --zvs-red: #e51400;
+  --zvs-scrollbar: #c1c1c1;
+  --zvs-scrollbar-hover: #a8a8a8;
+}
+
+/* Monokai */
+html[data-zvsc-theme='monokai'] {
+  --zvs-bg: #272822;
+  --zvs-bg-deep: #1e1f1c;
+  --zvs-bg-panel: #2d2e27;
+  --zvs-bg-header: #1e1f1c;
+  --zvs-bg-input: #3b3a32;
+  --zvs-hover: #3e3d32;
+  --zvs-border: #414339;
+  --zvs-border-strong: #75715e;
+  --zvs-fg: #cfcfc9;
+  --zvs-fg-strong: #f8f8f2;
+  --zvs-fg-dim: #90908a;
+  --zvs-fg-faint: #75715e;
+  --zvs-link: #66d9ef;
+  --zvs-accent: #75715e;
+  --zvs-focus: #66d9ef;
+  --zvs-btn: #75715e;
+  --zvs-btn-hover: #8f8a63;
+  --zvs-sel: #49483e;
+  --zvs-blue: #66d9ef;
+  --zvs-green: #a6e22e;
+  --zvs-yellow: #e6db74;
+  --zvs-orange: #fd971f;
+  --zvs-purple: #f92683;
+  --zvs-red: #f92683;
+  --zvs-scrollbar: #75715e;
+  --zvs-scrollbar-hover: #8f8a63;
+}
+
+/* GitHub Dark */
+html[data-zvsc-theme='github'] {
+  --zvs-bg: #0d1117;
+  --zvs-bg-deep: #010409;
+  --zvs-bg-panel: #161b22;
+  --zvs-bg-header: #161b22;
+  --zvs-bg-input: #0d1117;
+  --zvs-hover: #21262d;
+  --zvs-border: #30363d;
+  --zvs-border-strong: #484f58;
+  --zvs-fg: #c9d1d9;
+  --zvs-fg-strong: #e6edf3;
+  --zvs-fg-dim: #8b949e;
+  --zvs-fg-faint: #6e7681;
+  --zvs-link: #58a6ff;
+  --zvs-accent: #1f6feb;
+  --zvs-focus: #1f6feb;
+  --zvs-btn: #238636;
+  --zvs-btn-hover: #2ea043;
+  --zvs-sel: #264f78;
+  --zvs-blue: #79c0ff;
+  --zvs-green: #7ee787;
+  --zvs-yellow: #e3b341;
+  --zvs-orange: #ffa657;
+  --zvs-purple: #d2a8ff;
+  --zvs-red: #ff7b72;
+  --zvs-scrollbar: #484f58;
+  --zvs-scrollbar-hover: #6e7681;
+}
