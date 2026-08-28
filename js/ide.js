@@ -251,6 +251,10 @@
     } else if (d.allLoaded) {
       L.push('');
       L.push(C.cmt('// ─── 已加载全部 ' + d.answers.length + ' 个回答 ───'));
+    } else {
+      L.push('');
+      var remain = d.total ? Math.max(0, d.total - d.answers.length) : '…';
+      L.push('<a class="zvsc-cmt zvsc-more" data-more="detail" href="javascript:void(0)">' + esc('// …加载更多 (剩余约 ' + remain + ' 条) — 点击加载') + '</a>');
     }
     return L;
   }
@@ -477,7 +481,10 @@
       }
       if ((t = e.target.closest('.zvsc-set-val'))) { cycleSetting(t.getAttribute('data-set')); return; }
       if ((t = e.target.closest('.zvsc-searchline'))) { openSearchModal(); return; }
-      if ((t = e.target.closest('.zvsc-more'))) { loadMore(); return; }
+      if ((t = e.target.closest('.zvsc-more'))) {
+        if (t.getAttribute('data-more') === 'detail') { autoLoadAnswers(); return; }
+        loadMore(); return;
+      }
     });
 
     /* ----- 命令面板 ----- */
@@ -820,25 +827,60 @@
     };
   }
 
-  function answersAPIUrl(limit) {
+  function answersAPIUrl(limit, offset) {
+    var off = offset != null ? offset : (state.detail && state.detail.apiOffset != null ? state.detail.apiOffset : (state.detail ? state.detail.answers.length : 0));
     return '/api/v4/questions/' + state.detail.qid +
       '/answers?include=data[*].content,vote_count,comment_count,author.name,author.headline' +
-      '&limit=' + limit + '&offset=' + state.detail.answers.length + '&sort_by=default';
+      '&limit=' + limit + '&offset=' + off + '&sort_by=default';
   }
 
-  /** 初始回答数不足设置值时，用 API 补齐 */
+  /** 已加载回答 id 集合（用于去重，避免 SSR 初始数据与 API 分页重叠） */
+  var loadedAnswerIds = {};
+
+  /**
+   * 追加回答：按 id 去重后 push 进 state.detail.answers。
+   * 知乎的 answers API 是「默认排序列表内的 offset 切片」，其顺序可能
+   * 与 SSR 首屏解析到的初始回答列表错位（广告位/折叠回答等原因），
+   * 交界处会返回已存在的回答 —— 这里按 id 跳过。
+   * @returns 实际新增的数量
+   */
+  function appendAnswers(list) {
+    var d = state.detail;
+    var added = 0;
+    (list || []).forEach(function (x) {
+      var m = mapApiAnswer(x, d.answers.length);
+      if (!m.id || m.id === '0' || loadedAnswerIds[m.id]) return;
+      loadedAnswerIds[m.id] = 1;
+      d.answers.push(m);
+      added++;
+    });
+    return added;
+  }
+
+  /**
+   * 初始回答数不足设置值时，用 API 补齐。
+   * 使用独立的 apiOffset 追踪服务端分页位置，不受去重后数组长度影响。
+   */
   function fillDetail() {
     var d = state.detail;
     if (!d || !d.qid) return;
+    if (d.apiOffset == null) d.apiOffset = d.answers.length;
+    d.answers.forEach(function (a) { if (a.id) loadedAnswerIds[a.id] = 1; });
     var need = Math.min(d.shown - d.answers.length, 20);
     if (need <= 0) return;
-    fetchJSON(answersAPIUrl(need))
+    var off = d.apiOffset;
+    fetchJSON(answersAPIUrl(need, off))
       .then(function (json) {
-        ((json && json.data) || []).forEach(function (x) {
-          d.answers.push(mapApiAnswer(x, d.answers.length));
-        });
-        if ((json && json.paging && json.paging.is_end) || (d.total && d.answers.length >= d.total)) {
+        var raw = (json && json.data) || [];
+        var added = appendAnswers(raw);
+        d.apiOffset = off + raw.length;
+        var isEnd = json && json.paging && json.paging.is_end;
+        if (isEnd || (d.total && d.answers.length >= d.total) || raw.length === 0) {
           d.allLoaded = true;
+        } else if (raw.length > 0 && added === 0) {
+          // 本批全重叠（SSR/广告位错位），offset 已推进但无新增，递归补下一页
+          if (raw.length < need) d.allLoaded = true;
+          else fillDetail();
         }
         renderCode();
       })
@@ -847,6 +889,7 @@
 
   function nearBottom() {
     var el = refs.codeWrap;
+    if (!el) return false;
     return el.scrollTop + el.clientHeight >= el.scrollHeight - 600;
   }
 
@@ -855,47 +898,72 @@
     var d = state.detail;
     if (!d || d.loadingMore || d.allLoaded || !d.qid) return;
     if (state.file !== 'detail') return;
+    if (d.apiOffset == null) d.apiOffset = d.answers.length;
     d.loadingMore = true;
     renderCode();
-    fetchJSON(answersAPIUrl(5))
+    var off = d.apiOffset;
+    fetchJSON(answersAPIUrl(5, off))
       .then(function (json) {
-        ((json && json.data) || []).forEach(function (x) {
-          d.answers.push(mapApiAnswer(x, d.answers.length));
-        });
-        // 关键：新拉到的回答立刻纳入展示（否则只进数组不上屏，
-        // 且贴底判断恒真会把全部回答拉完才停——正是「只显示 1 个却说加载了 166 个」的原因）
+        var raw = (json && json.data) || [];
+        var added = appendAnswers(raw);
+        d.apiOffset = off + raw.length;
+        // 新拉到的回答立刻纳入展示
         d.shown = d.answers.length;
-        if ((json && json.paging && json.paging.is_end) || (d.total && d.answers.length >= d.total)) {
+        var isEnd = json && json.paging && json.paging.is_end;
+        if (isEnd || (d.total && d.answers.length >= d.total) || raw.length === 0) {
           d.allLoaded = true;
         }
         d.loadingMore = false;
         renderCode();
-        if (nearBottom()) autoLoadAnswers(); // 一屏内仍贴底则继续补
+        // 全重叠页：已推进 offset 但无新增，且未到末尾，自动重试下一页（避免卡在 5 条）
+        if (!d.allLoaded && raw.length > 0 && added === 0) {
+          // 递归拉下一页，而不是直接标记 allLoaded
+          if (d.apiOffset < (d.total || 1e9)) {
+            autoLoadAnswers();
+            return;
+          } else {
+            d.allLoaded = true;
+            renderCode();
+            return;
+          }
+        }
+        if (!d.allLoaded && nearBottom()) autoLoadAnswers(); // 一屏内仍贴底则继续补
       })
-      .catch(function () {
-        d.allLoaded = true;
+      .catch(function (err) {
+        // 网络/风控失败不标记 allLoaded，允许用户再次滚动重试
         d.loadingMore = false;
         renderCode();
+        try { console.warn('[zvsc] autoLoadAnswers failed', err); } catch (e) {}
       });
   }
 
   function initDetail() {
     var d = (ZVSC.parseQuestion && ZVSC.parseQuestion()) || null;
     if (!d || (!d.answers.length && !d.qid)) {
-      state.detail = { qid: '', title: document.title || '详情', total: 0, answers: [], shown: 0, allLoaded: true, loadingMore: false };
+      loadedAnswerIds = {};
+      state.detail = { qid: '', title: document.title || '详情', total: 0, answers: [], shown: 0, allLoaded: true, loadingMore: false, apiOffset: 0 };
       renderChrome();
       renderCode();
       return;
     }
+    // 每次进入详情页重置去重表与服务端分页游标（SPA 复用/设置变更重建时会再次进这里）
+    loadedAnswerIds = {};
+    d.apiOffset = d.answers.length;
+    d.allLoaded = !!d.allLoaded;
+    d.loadingMore = false;
     state.detail = d;
     // 初始展示数：跟知乎一致（SSR 给多少显示多少）；设置了数字则用 API 补齐
     d.shown = typeof settings.answersPerView === 'number'
       ? settings.answersPerView
       : d.answers.length;
+    // 若总数已知且首屏已齐，标记完成避免无效请求
+    if (d.total && d.answers.length >= d.total) d.allLoaded = true;
     renderChrome();
     renderCode();
-    fillDetail();
-    if (nearBottom()) autoLoadAnswers(); // 内容不足一屏时直接续载
+    if (!d.allLoaded) {
+      fillDetail();
+      if (nearBottom()) autoLoadAnswers(); // 内容不足一屏时直接续载
+    }
   }
 
   /** 专栏文章页初始化 */
@@ -925,6 +993,13 @@
     settings[key] = arr[(i + 1) % arr.length];
     saveSettings();
     applyTheme();
+    if (key === 'answersPerView' && state.detail) {
+      var d = state.detail;
+      var prevShown = d.shown;
+      d.shown = typeof settings.answersPerView === 'number' ? settings.answersPerView : d.answers.length;
+      // 从小切到大（或切到"跟知乎一致"后总数更多）需要补齐
+      if (d.shown > prevShown && !d.allLoaded) fillDetail();
+    }
     if (state.file === 'settings') renderCode();
     else if (state.file === 'detail') renderCode();
   }
