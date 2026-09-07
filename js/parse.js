@@ -90,15 +90,19 @@
   function parseItems() {
     var nodes = qall(document, ['.TopstoryItem', '.FeedSource']);
     var out = [];
+    var seen = {};
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
       var a = q1(node, ['.ContentItem-title a', 'h2 a', '.ContentItem-title']);
       if (!a || !a.href) continue;
+      var url = absUrl(a.getAttribute('href'));
+      if (!url || seen[url]) continue; // 去重：知乎无限加载偶发重复条目，避免「加载的还是同样的数据」
+      seen[url] = 1;
       out.push({
         id: out.length + 1,
         title: txt(a),
         author: txt(q1(node, ['.AuthorInfo-name'])),
-        url: absUrl(a.getAttribute('href')),
+        url: url,
         excerpt: txt(q1(node, ['.RichContent-inner', '.RichText'])).slice(0, 140)
       });
     }
@@ -110,14 +114,18 @@
     var nodes = qall(document, ['.HotItem']);
     if (!nodes.length) return parseItems();
     var out = [];
+    var seen = {};
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
       var a = q1(node, ['.HotItem-title a', '.HotItem-title']);
       if (!a) continue;
+      var url = absUrl(a.getAttribute('href'));
+      if (!url || seen[url]) continue; // 同上，去重
+      seen[url] = 1;
       out.push({
         id: out.length + 1,
         title: txt(a),
-        url: absUrl(a.getAttribute('href')),
+        url: url,
         heat: txt(q1(node, ['.HotItem-metrics'])),
         excerpt: txt(q1(node, ['.HotItem-excerpt'])).slice(0, 140)
       });
@@ -154,8 +162,34 @@
     return q1(document, [
       '.TopstoryItem:last-of-type',
       '.List-item:last-of-type',
+      '.FeedSource:last-of-type',
       '.SearchResult-Card:last-of-type'
     ]);
+  };
+
+  /** 知乎自带的「加载更多」按钮（部分信息流/列表版本用按钮而非纯滚动加载） */
+  ZVSC.feedMoreButton = function () {
+    var btns = qall(document, ['button', 'a']);
+    for (var i = 0; i < btns.length; i++) {
+      if (/加载更多|查看更多|Load\s*more/i.test(txt(btns[i]))) return btns[i];
+    }
+    return null;
+  };
+
+  /** 知乎是否已提示「没有更多了」（到底标记） */
+  ZVSC.feedEnded = function () {
+    var els = qall(document, [
+      '.Topstory-no-more',
+      '.List-bottom',
+      '.List-no-more',
+      '.NoMore',
+      '[class*="no-more"]',
+      '[class*="NoMore"]'
+    ]);
+    for (var i = 0; i < els.length; i++) {
+      if (/没有更多|没有新内容|到底了|没有啦/.test(txt(els[i]))) return true;
+    }
+    return false;
   };
 
   /* ============================ 问题详情页 ============================ */

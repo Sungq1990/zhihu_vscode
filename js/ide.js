@@ -638,11 +638,17 @@
             '试试侧边栏的其他文件，或刷新页面'
           ]);
 
-      var canMore = state.items.length > 0 && !state.exhausted;
-      if (canMore) {
+      if (state.items.length > 0) {
         lines = lines.slice(0, -1).concat([C.p('];')]);
         lines.push('');
-        lines.push('<a class="zvsc-cmt zvsc-more" href="javascript:void(0)">' + esc('// …加载更多') + '</a>');
+        if (state.loading) {
+          lines.push(C.cmt('// …正在加载更多，请稍候 …'));
+        } else if (state.exhausted) {
+          lines.push(C.cmt('// ─── 已经到底了，没有更多内容 ───'));
+          lines.push('<a class="zvsc-cmt zvsc-more" href="javascript:void(0)">' + esc('// …重试加载（可能还有内容）') + '</a>');
+        } else {
+          lines.push('<a class="zvsc-cmt zvsc-more" href="javascript:void(0)">' + esc('// …加载更多') + '</a>');
+        }
       }
     }
     setCodeLines(lines);
@@ -1086,28 +1092,83 @@
     })();
   }
 
-  /** 滚动隐藏的原页面触发知乎无限加载，然后重新解析（信息流） */
-  function loadMore() {
-    if (state.loading || state.exhausted || state.file === 'detail') return;
-    var myFile = state.file;
-    var before = state.items.length;
+  /** 触发知乎自己的无限加载：滚到底 + 点击知乎「加载更多」按钮（若有） */
+  function triggerFeedLoad() {
     var sentinel = ZVSC.feedSentinel && ZVSC.feedSentinel();
     if (sentinel) sentinel.scrollIntoView({ block: 'end' });
+    var btn = ZVSC.feedMoreButton && ZVSC.feedMoreButton();
+    if (btn && btn.click) {
+      try { btn.click(); } catch (e) { /* ignore */ }
+    }
+    var h = Math.max(
+      document.documentElement.scrollHeight,
+      document.body ? document.body.scrollHeight : 0
+    );
+    if (h) window.scrollTo(0, h);
+  }
 
+  /** 滚动代码容器，让第 idx 个信息流条目对齐到容器顶部（定位到新加载的首条） */
+  function scrollToFeedItem(idx) {
+    var it = state.items[idx];
+    if (!it || !it.url || !refs.codeWrap) return false;
+    var target = 'url: "' + it.url + '"';
+    var lines = Array.prototype.slice.call(refs.code.querySelectorAll('.zvsc-line'));
+    for (var i = 0; i < lines.length; i++) {
+      if ((lines[i].textContent || '').indexOf(target) > -1) {
+        // tsLines 里每条信息流固定 7 行，url 在条目内第 5 行；往回 4 行即条目首行（title 之上）
+        var anchor = lines[Math.max(0, i - 4)];
+        var wrapRect = refs.codeWrap.getBoundingClientRect();
+        var lineRect = anchor.getBoundingClientRect();
+        refs.codeWrap.scrollTop += (lineRect.top - wrapRect.top);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * 「加载更多」：触发知乎无限加载后轮询等待新条目。
+   * 知乎拉取 + 渲染是异步的，旧逻辑单次等 1.2s 经常不够，
+   * 一等不到就误判「没有更多」删掉按钮——改为多轮重试，
+   * 且仅当知乎明确提示「没有更多了」才标记到底。
+   */
+  function loadMore() {
+    if (state.loading || state.file === 'detail') return;
+    var myFile = state.file;
+    var before = state.items.length;
+    state.exhausted = false; // 到底后点「重试加载」复位，允许再试
     state.loading = true;
-    setTimeout(function () {
-      if (state.file !== myFile) return;
+    renderCode();
+    refs.codeWrap.scrollTop = refs.codeWrap.scrollHeight; // 停在按钮处，不跳动
+
+    triggerFeedLoad();
+
+    var tries = 0;
+    var MAX_TRIES = 6; // 最长约 6 × 800ms ≈ 4.8s
+
+    (function poll() {
+      if (state.file !== myFile) { state.loading = false; return; }
       var items = parseFor(myFile);
-      window.scrollTo(0, 0);
-      state.loading = false;
       if (items.length > before) {
         state.items = items;
+        state.loading = false;
+        window.scrollTo(0, 0);
         renderCode();
-      } else {
-        state.exhausted = true;
-        renderCode();
+        // 定位到新加载的第一条，让用户直接看到新增内容
+        if (!scrollToFeedItem(before)) refs.codeWrap.scrollTop = refs.codeWrap.scrollHeight;
+        return;
       }
-    }, 1200);
+      tries++;
+      if (tries >= MAX_TRIES) {
+        state.loading = false;
+        // 只有知乎自己说到底了才标记到底，否则保留按钮供再次点击
+        state.exhausted = !!(ZVSC.feedEnded && ZVSC.feedEnded());
+        renderCode();
+        return;
+      }
+      if (tries % 2 === 1) triggerFeedLoad(); // 中途再触发几次，防知乎去抖丢事件
+      setTimeout(poll, 800);
+    })();
   }
 
   /* ---------------------------- 搜索弹窗 ---------------------------- */
